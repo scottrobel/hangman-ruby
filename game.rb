@@ -9,5 +9,5 @@ def create_valid_words_file
         end
         puts "file created"
     end
-    puts valid_words[3]
 end
+create_valid_words_file
