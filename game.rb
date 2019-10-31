@@ -1,7 +1,7 @@
 def create_valid_words_file
     text_file = File.open("5desk.txt")
-    valid_words = File.open("valid_words.txt", "w+")
     if(!File.exist?("valid_words.txt"))
+        valid_words = File.open("valid_words.txt", "w+")
         while !text_file.eof?
             word = text_file.readline
             word_length = word.chomp.length
