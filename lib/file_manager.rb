@@ -1,9 +1,10 @@
+require "colorize"
 $saved_games = File.open("./saved_games.txt","r+")
 class FileManager
     def self.create_valid_words_file
-        text_file = File.open("../words/5desk.txt")
-        if(!File.exist?("../words/valid_words.txt"))
-            valid_words = File.open("../words/valid_words.txt", "w+")
+        text_file = File.open("./words/5desk.txt")
+        if(!File.exist?("./words/valid_words.txt"))
+            valid_words = File.open("./words/valid_words.txt", "w+")
             while !text_file.eof?
                 word = text_file.readline
                 word_length = word.chomp.length
@@ -17,25 +18,28 @@ class FileManager
         saved_game.game_saved = false
         saved_game
     end
-    def self.get_saved_game_from_user_input
-        largest_game_number = FileManager.get_saved_games[-1].game_number
-        game_number = -1
-        while(!(0 <= game_number && game_number <= largest_game_number))
-            puts "what game number would you like to resume"
-            matches = gets.chomp.match(/[0-9]/)
-            game_number = (matches)? matches[0].to_i : "-1"
-        end
-        FileManager.get_saved_game(game_number)
-    end
     def self.get_game
         if(!FileManager.get_saved_games.empty?)
+            unfinished_game_numbers_array = FileManager.get_saved_games.map do |game|
+                game.game_saved = false
+                game
+            end.select do |game|
+                !game.game_over?
+            end.map do |game|
+                game.game_number
+            end
             game = nil
             while(game == nil)
-                display_saved_games
-                puts "would you like to resume one of these games\ny/yes = resume saved game\nn/no = create new game"
+                print_game = lambda do |game| 
+                    game.game_saved = false 
+                    print (game.game_over?)? "#{game.to_s}".red + "    Finished\n".green : "#{game.to_s}".blue + "    unfinished\n".green
+                end
+                FileManager.get_saved_games.each(&print_game)
+                puts "would you like to resume one of these games\nEnter a game number to resume an unfinished game\nn/no = create new game"
                 answer = gets.chomp.downcase
-                game = FileManager.get_saved_game_from_user_input if(answer == "y" || answer == "yes")
+                game_number = (answer.match(/[0-9]/))? answer.to_i : "not a game number"
                 game = FileManager.make_game_from_user_input if(answer == "n" || answer == "no")
+                game = FileManager.get_saved_game(game_number) if(unfinished_game_numbers_array.include?(game_number))
             end
         else
             game = FileManager.make_game_from_user_input
@@ -61,6 +65,7 @@ class FileManager
             $saved_games.write(marshaled_games.join("_____"))
             puts "file was saved"
         else
+            game.game_saved = true
             games = FileManager.get_saved_games
             games[game.game_number] = game
             marshaled_games = games.map{|game| Marshal.dump(game)}
@@ -70,10 +75,19 @@ class FileManager
         end
     end
     def self.display_saved_games
-        puts FileManager.get_saved_games
+        FileManager.get_saved_games.each do |game|
+            if(!game.game_over?)
+                puts "#{game}".green
+            else
+                puts "#{game} Game over".red
+            end
+        end
     end
     def self.get_saved_games
         $saved_games.rewind
         $saved_games.read.split("_____").map{|game| Marshal.load(game)}
+    end
+    def self.select_games(&lambda_condition)
+        FileManager.get_saved_games.select(&lambda_condition)
     end
 end 
